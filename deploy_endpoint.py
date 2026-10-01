@@ -1,0 +1,47 @@
+import asyncio
+
+from proximl import ProxiML
+
+client = ProxiML()
+
+
+async def create_endpoint():
+    job = await client.jobs.create(
+        "Simple Image Classifier",
+        type="endpoint",
+        gpu_types=["rtx3090"],
+        gpu_count=1,
+        disk_size=10,
+        model=dict(
+            source_type="git",
+            source_uri="https://github.com/proxiML/simple-pytorch-classifier.git",
+        ),
+        endpoint=dict(
+            routes=[
+                dict(
+                    path="/predict",
+                    verb="POST",
+                    function="predict_base64_image",
+                    file="predict",
+                    positional=True,
+                    body=[
+                        dict(
+                            name="name",
+                            type="str",
+                        ),
+                        dict(name="contents", type="str"),
+                    ],
+                )
+            ]
+        ),
+    )
+    print("Created Job: ", job.id)
+    print("Waiting for job to start...")
+    await job.wait_for("running")
+    print("")
+    print("Endpoint running at: ", job.url)
+    return job
+
+
+if __name__ == "__main__":
+    asyncio.run(create_endpoint())
